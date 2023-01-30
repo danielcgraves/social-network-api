@@ -1,4 +1,4 @@
-const { ObjectId } = require('mongoose').Types;
+// const { ObjectId } = require('mongoose').Types;
 const { User, Thought } = require('../models');
 
 //Aggregate functions??
@@ -11,6 +11,8 @@ module.exports = {
 	},
 	getSingleUser(req, res) {
 		User.findOne({ _id: req.params.userId })
+			.populate('thoughts')
+			.populate('friends')
 			.select('-__v')
 			.then((user) =>
 				!user
@@ -48,6 +50,33 @@ module.exports = {
 					: Thought.deleteMany({ _id: { $in: user.thoughts } })
 			)
 			.then(() => res.json({ message: 'User and thoughts deleted!' }))
+			.catch((err) => res.status(500).json(err));
+	},
+	addFriend(req, res) {
+		User.findOneAndUpdate(
+			{ _id: req.params.userId },
+			{ $addToSet: { friends: req.params.friendId } },
+			{ runValidators: true, new: true }
+		)
+			.then((user) =>
+				!user
+					? res.status(404).json({ message: 'No User find with this ID!' })
+					: res.json(user)
+			)
+			.catch((err) => res.status(500).json(err));
+	},
+	//delete a friend
+	deleteFriend(req, res) {
+		User.findOneAndUpdate(
+			{ _id: req.params.userId },
+			{ $pull: { friends: req.params.friendId } },
+			{ new: true }
+		)
+			.then((user) =>
+				!user
+					? res.status(404).json({ message: 'No User find with this ID!' })
+					: res.json(user)
+			)
 			.catch((err) => res.status(500).json(err));
 	},
 };
